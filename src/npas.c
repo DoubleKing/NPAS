@@ -14,11 +14,17 @@ bool write2file(char * filename, char * str)
 	{
 		return false;
 	}
-	int fd = open(filename, O_WRONLY | O_APPEND);
+	int fd = open(filename, O_RDWR | O_APPEND);
 	if(fd == -1)
 	{
+		printf("open fail\n");
 		return false;
 	}
+	char buf[64] = {0};
+	time_t time_now;
+	time_now = time(&time_now);
+	strftime(buf, sizeof(buf), "%y-%m-%d %H:%M\t", gmtime(&time_now));
+	write(fd, buf, strlen(buf));
 	write(fd, str, strlen(str));
 	close(fd);
 
@@ -33,15 +39,25 @@ bool decode_tcp(const unsigned char * packet_buff, unsigned int len)
 	struct tcp_hdr *tcp_hdr = (struct tcp_hdr *)packet_buff;
 	if(ntohs(tcp_hdr->th_dport) == 80 || ntohs(tcp_hdr->th_sport) == 80)
 	{
-		char * host = strstr(packet_buff + sizeof(struct tcp_hdr),"Host:");
+		char * host = strstr((char *)packet_buff + sizeof(struct tcp_hdr),"Host: ");
 		if(host)
 		{
 			char * CF = strstr(host,"\r\n");
-			char ret[256] = {0};
-			memcpy(ret, host, (CF - host)>254 ? 254 :  CF - host);
+			char ret[1024] = {0};
+			memcpy(ret, host+6, (CF - host - 6)>254 ? 254 :  CF - host -6);
+			char * payload = (char *)packet_buff + sizeof(struct tcp_hdr);
+			if(strncmp(payload,"GET ",4 ) == 0 || strncmp(payload,"POST", 4) == 0)
+			{
+				char * end = strstr(payload,"HTTP");
+				if(end != NULL)
+				{
+					strncat(ret, payload+4, end-payload-4);
+				}
+			}
 			strcat(ret,"\n");
 			write2file(FILE_NAME,ret);
 		}
+
 	}
 	return true;
 }
