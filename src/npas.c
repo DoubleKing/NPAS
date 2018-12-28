@@ -23,7 +23,7 @@ bool write2file(char *filename, char *str)
 	char buf[64] = { 0 };
 	time_t time_now;
 	time_now = time(&time_now);
-	strftime(buf, sizeof(buf), "%y-%m-%d %H:%M\t", gmtime(&time_now));
+	strftime(buf, sizeof(buf), "%y-%m-%d %H:%M\t", localtime(&time_now));
 	write(fd, buf, strlen(buf));
 	write(fd, str, strlen(str));
 	close(fd);
